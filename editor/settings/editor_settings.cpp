@@ -533,6 +533,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 	_initial_set("interface/editor/input/mouse_extra_buttons_navigate_history", true);
 	_initial_set("interface/editor/behavior/save_each_scene_on_quit", true, true); // Regression
 	EDITOR_SETTING_BASIC(Variant::BOOL, PROPERTY_HINT_NONE, "interface/editor/behavior/save_on_focus_loss", false, "")
+	// Atlas Studio (wolo/README.md, cambio 6).
+	EDITOR_SETTING(Variant::BOOL, PROPERTY_HINT_NONE, "interface/editor/behavior/auto_reload_external_changes", false, "")
 	EDITOR_SETTING_USAGE(Variant::INT, PROPERTY_HINT_ENUM, "interface/editor/appearance/accept_dialog_cancel_ok_buttons", 0,
 			vformat("Auto (%s),Cancel First,OK First", DisplayServer::get_singleton()->get_swap_cancel_ok() ? "OK First" : "Cancel First"),
 			PROPERTY_USAGE_DEFAULT | PROPERTY_USAGE_RESTART_IF_CHANGED);
@@ -1107,6 +1109,8 @@ void EditorSettings::_load_defaults(Ref<ConfigFile> p_extra_config) {
 #endif
 	int default_game_embed_mode = OS::get_singleton()->has_feature("xr_editor") ? -1 : 0;
 	EDITOR_SETTING_BASIC(Variant::INT, PROPERTY_HINT_ENUM, "run/window_placement/game_embed_mode", default_game_embed_mode, game_embed_mode_hints);
+	// Atlas Studio (wolo/README.md, cambio 6).
+	EDITOR_SETTING(Variant::BOOL, PROPERTY_HINT_NONE, "run/window_placement/game_embed_keep_main_screen", false, "")
 
 	// Auto save
 	_initial_set("run/auto_save/save_before_running", true, true);

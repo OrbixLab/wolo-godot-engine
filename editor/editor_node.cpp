@@ -87,6 +87,7 @@
 #include "editor/gui/editor_quick_open_dialog.h"
 #include "editor/gui/editor_title_bar.h"
 #include "editor/gui/editor_toaster.h"
+#include "editor/gui/atlas_startup_curtain.h"
 #include "editor/gui/progress_dialog.h"
 #include "editor/gui/window_wrapper.h"
 #include "editor/import/3d/editor_import_collada.h"
@@ -377,7 +378,9 @@ void EditorNode::_update_title() {
 		// Display the "modified" mark before anything else so that it can always be seen in the OS task bar.
 		title = vformat("(*) %s", title);
 	}
-	DisplayServer::get_singleton()->window_set_title(title + String(" - ") + GODOT_VERSION_NAME);
+	// Atlas Studio (wolo/README.md, cambio 4): el editor se llama Atlas Studio. Inicio ya se llama así.
+	const String product = "Atlas Studio";
+	DisplayServer::get_singleton()->window_set_title(title == product ? title : title + String(" - ") + product);
 	if (project_title) {
 		project_title->set_text(title);
 	}
@@ -1586,6 +1589,14 @@ void EditorNode::_scan_external_changes() {
 	}
 
 	if (need_reload) {
+		// Atlas Studio (wolo/README.md, cambio 6): lo que cambió en el disco se recarga sin preguntar.
+		if (EDITOR_GET("interface/editor/behavior/auto_reload_external_changes")) {
+			_reload_modified_scenes();
+			if (disk_changed_project) {
+				_reload_project_settings();
+			}
+			return;
+		}
 		callable_mp((Window *)disk_changed, &Window::popup_centered_ratio).call_deferred(0.3);
 	}
 }
@@ -8660,6 +8671,10 @@ EditorNode::EditorNode() {
 	progress_dialog = memnew(ProgressDialog);
 	add_child(progress_dialog);
 	progress_dialog->connect(SceneStringName(visibility_changed), callable_mp(this, &EditorNode::_progress_dialog_visibility_changed));
+	// Atlas Studio (wolo/README.md, cambio 5): el telón de arranque, en los proyectos de Studio.
+	if (AtlasStartupCurtain::is_studio_project() && DisplayServer::get_singleton()->get_name() != "headless") {
+		add_child(memnew(AtlasStartupCurtain));
+	}
 
 	gui_base = memnew(Panel);
 	add_child(gui_base);

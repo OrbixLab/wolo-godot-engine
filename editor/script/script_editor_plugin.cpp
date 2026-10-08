@@ -807,6 +807,8 @@ bool ScriptEditor::_test_script_times_on_disk(Ref<Resource> p_for_script) {
 	bool need_ask = false;
 	bool need_reload = false;
 	bool use_autoreload = EDITOR_GET("text_editor/behavior/files/auto_reload_scripts_on_external_change");
+	// Atlas Studio (wolo/README.md, cambio 6): también los que tienen cambios sin guardar.
+	const bool reload_unsaved = EDITOR_GET("interface/editor/behavior/auto_reload_external_changes");
 
 	for (int i = 0; i < tab_container->get_tab_count(); i++) {
 		ScriptEditorBase *seb = Object::cast_to<ScriptEditorBase>(tab_container->get_tab_control(i));
@@ -830,7 +832,7 @@ bool ScriptEditor::_test_script_times_on_disk(Ref<Resource> p_for_script) {
 			TreeItem *ti = disk_changed_list->create_item(r);
 			ti->set_text(0, seb->edited_file_data.path.get_file());
 
-			if (!use_autoreload || seb->is_unsaved()) {
+			if (!use_autoreload || (seb->is_unsaved() && !reload_unsaved)) {
 				need_ask = true;
 			}
 			need_reload = true;

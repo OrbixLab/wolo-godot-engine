@@ -33,6 +33,7 @@
 #include "core/object/callable_mp.h"
 #include "core/os/os.h"
 #include "editor/editor_node.h"
+#include "editor/gui/atlas_startup_curtain.h"
 #include "editor/themes/editor_scale.h"
 #include "main/main.h"
 #include "scene/gui/panel_container.h"
@@ -170,6 +171,8 @@ void ProgressDialog::_popup() {
 	ms += main_border_size;
 
 	center_panel->set_custom_minimum_size(ms);
+	// Atlas Studio (wolo/README.md, cambio 5): con el telón de arranque arriba, el progreso corre sin verse.
+	center_panel->set_modulate(Color(1, 1, 1, AtlasStartupCurtain::is_up() ? 0 : 1));
 
 	if (is_ready()) {
 		_reparent_and_show();

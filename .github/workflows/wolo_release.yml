@@ -1,0 +1,133 @@
+# El motor de Atlas Studio: compila el editor de este fork para Windows y Linux y lo publica como
+# release de GitHub. Ver wolo/README.md.
+#
+# Se dispara al subir un tag `<versión de Godot>-wolo.<n>` (por ejemplo 4.7.2-wolo.1) desde la rama
+# wolo/4.7: los assets quedan en Releases y WoloSimulator los baja con tools/fetch-engine.sh. A mano
+# (Actions → "Wolo: motor de Atlas Studio" → Run workflow) compila sin publicar y deja los
+# ejecutables como artifacts del run, para probar una rama.
+#
+# El CI de Godot (runner.yml) no corre en el fork: se apaga con la variable de repositorio
+# DISABLE_GODOT_CI=true (Settings → Secrets and variables → Actions → Variables).
+name: 🐺 Wolo - motor de Atlas Studio
+
+on:
+  push:
+    tags: ["*-wolo.*"]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}|${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf8
+
+jobs:
+  windows:
+    name: 🏁 Windows
+    runs-on: windows-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Caché de SCons
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: wolo-windows-editor
+        continue-on-error: true
+
+      - uses: ./.github/actions/godot-deps
+
+      # El mismo script que se usa a mano. El runner trae el Windows SDK que pide WinRT.
+      - name: Compilar
+        shell: pwsh
+        run: ./wolo/build-windows.ps1 -Zip -CachePath "${{ github.workspace }}/.scons_cache/"
+
+      - name: Guardar caché de SCons
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: wolo-windows-editor
+        continue-on-error: true
+
+      - name: Probar el ejecutable
+        shell: pwsh
+        run: ./bin/godot.windows.editor.x86_64.exe --headless --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolo-godot-windows
+          path: bin/wolo-godot-windows.zip
+          retention-days: 7
+
+  linux:
+    name: 🐧 Linux
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Caché de SCons
+        uses: ./.github/actions/godot-cache-restore
+        with:
+          cache-name: wolo-linux-editor
+        continue-on-error: true
+
+      - uses: ./.github/actions/godot-deps
+
+      # Como en el CI de Godot: las bibliotecas del sistema se cargan en tiempo de ejecución
+      # (use_sowrap), así que sólo hace falta wayland-scanner. AccessKit, precompilado.
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwayland-bin
+          python ./misc/scripts/install_accesskit.py
+
+      # LTO sólo para las releases: es la de las compilaciones oficiales, y mucho más lenta.
+      - name: Compilar
+        env:
+          BUILD_NAME: wolo
+        run: |
+          scons platform=linuxbsd target=editor production=yes \
+            lto=${{ startsWith(github.ref, 'refs/tags/') && 'auto' || 'none' }} -j$(nproc) \
+            "cache_path=${{ github.workspace }}/.scons_cache/"
+          cp bin/godot.linuxbsd.editor.x86_64 bin/godot
+          (cd bin && zip -9 wolo-godot-linux.zip godot)
+
+      - name: Guardar caché de SCons
+        uses: ./.github/actions/godot-cache-save
+        with:
+          cache-name: wolo-linux-editor
+        continue-on-error: true
+
+      - name: Probar el ejecutable
+        run: ./bin/godot --headless --version
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wolo-godot-linux
+          path: bin/wolo-godot-linux.zip
+          retention-days: 7
+
+  release:
+    name: 📦 Release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publicar
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum wolo-godot-*.zip > SHA256SUMS
+          gh release create "${{ github.ref_name }}" wolo-godot-*.zip SHA256SUMS \
+            --repo "${{ github.repository }}" --target "${{ github.sha }}" \
+            --title "Motor de Atlas Studio ${{ github.ref_name }}" \
+            --notes "Editor de Godot con los cambios de Wolo (wolo/README.md). Lo baja WoloSimulator con tools/fetch-engine.sh."

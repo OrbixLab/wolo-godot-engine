@@ -566,7 +566,8 @@ void GameView::_play_pressed() {
 		// the mouse clicks are not registered.
 		EditorNode::get_singleton()->set_unfocused_low_processor_usage_mode_enabled(false);
 		_update_embed_window_size();
-		if (!window_wrapper->get_window_enabled()) {
+		// Atlas Studio (wolo/README.md, cambio 6): el juego se ve en otra pantalla, que no se cambia.
+		if (!window_wrapper->get_window_enabled() && !EDITOR_GET("run/window_placement/game_embed_keep_main_screen")) {
 			EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_GAME);
 			// Reset the normal size of the bottom panel when fully expanded.
 			EditorNode::get_singleton()->get_bottom_panel()->set_expanded(false);
@@ -619,7 +620,7 @@ void GameView::_embedding_failed() {
 }
 
 void GameView::_embedded_process_focused() {
-	if (embed_on_play && !window_wrapper->get_window_enabled()) {
+	if (embed_on_play && !window_wrapper->get_window_enabled() && !EDITOR_GET("run/window_placement/game_embed_keep_main_screen")) {
 		EditorNode::get_singleton()->get_editor_main_screen()->select(EditorMainScreen::EDITOR_GAME);
 	}
 }
@@ -1344,7 +1345,11 @@ void GameView::_update_arguments_for_instance(int p_idx, List<String> &r_argumen
 	Rect2i rect = embedded_process->get_screen_embedded_window_rect();
 
 	// Usually, the global rect of the embedded process control is invalid because it was hidden. We will calculate it manually.
-	if (!window_wrapper->get_window_enabled()) {
+	// Atlas Studio (wolo/README.md, cambio 6): con el juego en otra pantalla, el control ya está
+	// acomodado donde se ve, y el juego se crea ahí y no en el centro de la pantalla principal.
+	const bool keep_screen = EDITOR_GET("run/window_placement/game_embed_keep_main_screen");
+	const bool laid_out = embedded_process->is_inside_tree() && embedded_process->get_size().x > 0 && embedded_process->get_size().y > 0;
+	if (!window_wrapper->get_window_enabled() && !(keep_screen && laid_out)) {
 		Size2 old_min_size = embedded_process->get_custom_minimum_size();
 		embedded_process->set_custom_minimum_size(Size2i());
 
