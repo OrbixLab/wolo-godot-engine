@@ -281,6 +281,10 @@
 
 /tests/                                       @godotengine/tests
 
+# Wolo (wolo/README.md)
+
+/wolo/                                        @gonza2206
+
 # Thirdparty
 
 /thirdparty/                                  @godotengine/buildsystem

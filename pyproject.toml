@@ -74,6 +74,10 @@ skip = [
 	"editor/project_converter_3_to_4.cpp",
 	"platform/android/java/lib/src/main/java/com/*",
 	"platform/web/package-lock.json",
+	# Wolo (wolo/README.md): written in Spanish, which codespell would "fix" into English.
+	".github/workflows/wolo_*.yml",
+	"editor/gui/atlas_startup_curtain.*",
+	"wolo/*",
 ]
 ignore-words-list = [
 	"breaked",
